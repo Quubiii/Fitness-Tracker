@@ -14,41 +14,61 @@ import org.jdatepicker.impl.JDatePanelImpl;
 import org.jdatepicker.impl.JDatePickerImpl;
 import org.jdatepicker.impl.UtilDateModel;
 
+/**
+ * The {@code AskForDataGUI} class creates a graphical user interface
+ * that allows new users to input their personal data such as name, weight,
+ * height, date of birth, and gender. Upon submission, the data is validated
+ * and saved to the appropriate files. The class also handles the creation
+ * of a new user account by generating a UUID and recording the account
+ * creation date.
+ */
 public class AskForDataGUI {
     private final String login;
     private final String password;
 
-    // Przechowujemy dokładny czas założenia konta.
+    // Stores the exact time when the account was created.
     private LocalDateTime accDate;
 
+    /**
+     * Constructs the {@code AskForDataGUI} and initializes the GUI components.
+     *
+     * @param login    The login username of the user.
+     * @param password The password of the user.
+     */
     public AskForDataGUI(String login, String password) {
         this.login = login;
         this.password = password;
 
+        // Create the main frame
         JFrame frame = new JFrame("Fitness Tracker - User Data");
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         panel.setBackground(new Color(230, 220, 250));
         panel.setBorder(BorderFactory.createEmptyBorder(30, 30, 30, 30));
 
+        // Title label
         JLabel titleLabel = new JLabel("FILL IN YOUR DATA");
         titleLabel.setFont(new Font("Comic Sans MS", Font.BOLD, 20));
         titleLabel.setForeground(new Color(113, 54, 143));
         titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
         titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
+        // Name components
         JLabel nameLabel = createCenteredLabel("Name:");
         JTextField nameField = createTextField();
 
+        // Weight components
         JLabel weightLabel = createCenteredLabel("Weight (kg):");
         JTextField weightField = createTextField();
 
+        // Height components
         JLabel heightLabel = createCenteredLabel("Height (cm):");
         JTextField heightField = createTextField();
 
+        // Date of Birth components
         JLabel dobLabel = createCenteredLabel("Date of Birth:");
 
-        // Date Picker
+        // Date Picker setup
         UtilDateModel dateModel = new UtilDateModel();
         Properties dateProperties = new Properties();
         dateProperties.put("text.today", "Today");
@@ -59,20 +79,23 @@ public class AskForDataGUI {
         datePicker.getJFormattedTextField().setFont(new Font("Comic Sans MS", Font.BOLD, 16));
         datePicker.setAlignmentX(Component.CENTER_ALIGNMENT);
 
+        // Gender components
         JLabel genderLabel = createCenteredLabel("Gender:");
         JComboBox<String> genderComboBox = new JComboBox<>(new String[]{"Male", "Female", "Other"});
         genderComboBox.setFont(new Font("Comic Sans MS", Font.BOLD, 14));
         genderComboBox.setAlignmentX(Component.CENTER_ALIGNMENT);
 
+        // Submit button
         JButton submitButton = new JButton("SUBMIT");
         submitButton.setForeground(new Color(113, 54, 143));
         submitButton.setFont(new Font("Comic Sans MS", Font.BOLD, 14));
         submitButton.setAlignmentX(Component.CENTER_ALIGNMENT);
 
+        // Message label for feedback
         JLabel messageLabel = new JLabel("", SwingConstants.CENTER);
         messageLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        // Dodawanie komponentów do panelu
+        // Adding components to the panel with spacing
         panel.add(Box.createVerticalGlue());
         panel.add(titleLabel);
         panel.add(Box.createRigidArea(new Dimension(0, 15)));
@@ -108,14 +131,15 @@ public class AskForDataGUI {
         panel.add(submitButton);
         panel.add(Box.createVerticalGlue());
 
+        // Add the panel to the frame
         frame.add(panel, BorderLayout.CENTER);
         frame.setPreferredSize(new Dimension(500, 600));
         frame.pack();
-        frame.setLocationRelativeTo(null);
+        frame.setLocationRelativeTo(null); // Center the frame on the screen
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setVisible(true);
 
-        // -- Obsługa przycisku SUBMIT --
+        // -- Handling the SUBMIT button click --
         submitButton.addActionListener(e -> {
             String name = nameField.getText();
             String weight = weightField.getText();
@@ -133,67 +157,69 @@ public class AskForDataGUI {
                 double weightValue = Double.parseDouble(weight);
                 int heightValue = Integer.parseInt(height);
 
-                // Sprawdzanie, czy pola nie są puste
+                // Check if fields are not empty
                 if (name.isEmpty() || dob == null || gender == null) {
                     throw new IllegalArgumentException("Fields cannot be empty.");
                 }
-                // Zabezpieczenie, aby nie można było wybrać dzisiejszej ani młodszej daty
+                // Ensure the date of birth is not today or a future date
                 if (!dob.isBefore(LocalDate.now())) {
                     throw new IllegalArgumentException("Date of Birth cannot be today or a future date.");
                 }
 
-                // Tworzymy użytkownika w pliku usersLoginData.txt, pobierając jego UUID
+                // Create the user in the usersLoginData.txt file and get the UUID
                 String userUUID = RegisterGUI.addNewUser(login, password);
                 LoginGUI.loggedInUserUUID = userUUID;
 
-                // Ustawiamy dokładny czas założenia konta
+                // Set the exact time of account creation
                 accDate = LocalDateTime.now();
 
-                // Wyliczanie wieku
+                // Calculate age
                 int age = Period.between(dob, LocalDate.now()).getYears();
 
-                // Formatowanie daty założenia konta (np. "2025-01-20 14:33:05")
+                // Format the account creation date (e.g., "2025-01-20 14:33:05")
                 DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
                 String creationDateStr = accDate.format(formatter);
 
-                // Kompletujemy dane do zapisu w pliku usersData.txt
-                // Format: uuid;Imię;Waga;Wzrost;Wiek;Płeć;DATA_ZAŁOŻENIA_KONTA
+                // Compile the data to be saved in usersData.txt
+                // Format: uuid;Name;Weight;Height;Age;Gender;AccountCreationDate;CurrentWeightDate
                 String userDataLine = userUUID + ";" + name + ";"
                         + weightValue + ";" + heightValue + ";"
                         + age + ";" + gender + ";" + creationDateStr + ";" + creationDateStr;
 
-                // Zapis do pliku usersData.txt (dopisywanie na końcu)
+                // Write to usersData.txt (appending at the end)
                 try (FileWriter writer = new FileWriter("src/main/resources/usersData.txt", true)) {
                     writer.write(userDataLine + System.lineSeparator());
                 } catch (IOException ioex) {
                     ioex.printStackTrace();
-                    // Komunikat w razie błędu zapisu do pliku
+                    // Display error message if writing to file fails
                     messageLabel.setText("Error writing data to file!");
                     messageLabel.setForeground(Color.RED);
                     return;
                 }
 
-                // Jeśli doszło tu, znaczy, że rejestracja i zapisy się udały
+                // If execution reaches here, registration and file writing were successful
                 messageLabel.setText("Data submitted successfully!");
                 messageLabel.setFont(new Font("Comic Sans MS", Font.BOLD, 12));
                 messageLabel.setForeground(Color.GREEN);
 
-                // Zamykamy okno
+                // Close the current window and open the main GUI
                 frame.dispose();
                 new MainGUI();
 
             } catch (NumberFormatException ex) {
+                // Handle non-numeric weight and height inputs
                 messageLabel.setText("Weight and Height must be numeric.");
                 messageLabel.setFont(new Font("Comic Sans MS", Font.BOLD, 12));
                 messageLabel.setForeground(Color.RED);
             } catch (IllegalArgumentException ex) {
+                // Handle other input validation errors
                 messageLabel.setText(ex.getMessage());
                 messageLabel.setFont(new Font("Comic Sans MS", Font.BOLD, 12));
                 messageLabel.setForeground(Color.RED);
             }
         });
 
-        // Zmiana kursora myszy na "rączkę" przy najechaniu
+        // Change cursor to hand cursor when hovering over the submit button
         submitButton.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
             public void mouseEntered(java.awt.event.MouseEvent e) {
@@ -208,13 +234,20 @@ public class AskForDataGUI {
     }
 
     /**
-     * Zwraca datę i czas założenia konta (ustawianą w momencie sukcesu SUBMIT).
+     * Returns the account creation date and time set during the successful submission.
+     *
+     * @return The {@code LocalDateTime} representing the account creation timestamp.
      */
     public LocalDateTime getAccDate() {
         return accDate;
     }
 
-    // Metody pomocnicze dla komponentów
+    /**
+     * Creates a centered label with the specified text.
+     *
+     * @param text The text to be displayed on the label.
+     * @return A {@code JLabel} configured with the specified text and styling.
+     */
     private JLabel createCenteredLabel(String text) {
         JLabel label = new JLabel(text, SwingConstants.CENTER);
         label.setFont(new Font("Comic Sans MS", Font.BOLD, 16));
@@ -223,6 +256,11 @@ public class AskForDataGUI {
         return label;
     }
 
+    /**
+     * Creates a text field with predefined styling.
+     *
+     * @return A {@code JTextField} configured with the specified styling.
+     */
     private JTextField createTextField() {
         JTextField textField = new JTextField(20);
         textField.setFont(new Font("Comic Sans MS", Font.BOLD, 16));
